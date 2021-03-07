@@ -36,6 +36,25 @@
 
 #include "Joystick.h"
 
+/****************** Joystick interface ******************/
+
+#define JOY_LEFT	(1 << 4)
+#define JOY_UP		(1 << 5)
+#define JOY_RIGHT	(1 << 6)
+#define JOY_DOWN 	(1 << 7)
+#define JOY_MASK	(JOY_LEFT | JOY_UP | JOY_RIGHT | JOY_DOWN)
+
+static inline void Joystick_Init(void)
+{
+	DDRC  &= ~JOY_MASK;
+	PORTC |= JOY_MASK;
+}
+static inline uint8_t Joystick_GetStatus(void)
+{
+	return (uint8_t)(~PINC & JOY_MASK);
+}
+
+
 /** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevJoystickHIDReportBuffer[sizeof(USB_JoystickReport_Data_t)];
 
@@ -172,9 +191,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	  JoystickReport->X = -100;
 	else if (JoyStatus_LCL & JOY_RIGHT)
 	  JoystickReport->X =  100;
-
-	if (JoyStatus_LCL & JOY_PRESS)
-	  JoystickReport->Button |= (1 << 1);
 
 	if (ButtonStatus_LCL & BUTTONS_BUTTON1)
 	  JoystickReport->Button |= (1 << 0);
