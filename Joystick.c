@@ -54,6 +54,48 @@ static inline uint8_t Joystick_GetStatus(void)
 	return (uint8_t)(~PINC & JOY_MASK);
 }
 
+/****************** Button interface ******************/
+
+#define BUTTONS_BUTTON1	(1 << 0)
+#define BUTTONS_BUTTON2	(1 << 1)
+#define BUTTONS_BUTTON3	(1 << 2)
+#define BUTTONS_BUTTON4	(1 << 3)
+#define BUTTONS_BUTTON5	(1 << 4)
+#define BUTTONS_BUTTON6	(1 << 5)
+#define BUTTONS_BUTTON7	(1 << 6)
+#define BUTTONS_BUTTON8	(1 << 7)
+#define BUTTON_MASK	(BUTTONS_BUTTON1 | BUTTONS_BUTTON2 | BUTTONS_BUTTON3 | BUTTONS_BUTTON4 | BUTTONS_BUTTON5 | BUTTONS_BUTTON6 | BUTTONS_BUTTON7 | BUTTONS_BUTTON8)
+
+static uint8_t debounceB0,debounceB1,debounceB2,debouncedBState;
+
+static inline void Buttons_Init(void)
+{
+	DDRB  &= ~BUTTON_MASK;
+	PORTB |= BUTTON_MASK;
+}
+
+static inline uint8_t Buttons_GetStatus(void)
+{
+	/* Vertical counter: http://www.dattalo.com/technical/software/pic/debounce.html */
+	/* Set delta to changes from last sample */
+	uint8_t delta = ~PINB ^ debouncedBState;
+
+	/* Increment vertical counter */
+	debounceB2 = debounceB2 ^ (debounceB1 & debounceB0);
+	debounceB1 = debounceB1 ^ debounceB0;
+	debounceB0  = ~debounceB0;
+
+	/* reset any unchanged bits */
+	debounceB0 &= delta;
+	debounceB1 &= delta;
+	debounceB2 &= delta;
+
+	/* update state & calculate returned change set */
+	debouncedBState ^= ~(~delta | debounceB0 | debounceB1 | debounceB2);
+	return (uint8_t)(debouncedBState & BUTTON_MASK);
+}
+
+/******************************************************/
 
 /** Buffer to hold the previously generated HID report, for comparison purposes inside the HID class driver. */
 static uint8_t PrevJoystickHIDReportBuffer[sizeof(USB_JoystickReport_Data_t)];
@@ -180,7 +222,6 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	USB_JoystickReport_Data_t* JoystickReport = (USB_JoystickReport_Data_t*)ReportData;
 
 	uint8_t JoyStatus_LCL    = Joystick_GetStatus();
-	uint8_t ButtonStatus_LCL = Buttons_GetStatus();
 
 	if (JoyStatus_LCL & JOY_UP)
 	  JoystickReport->Y = -100;
@@ -192,8 +233,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	else if (JoyStatus_LCL & JOY_RIGHT)
 	  JoystickReport->X =  100;
 
-	if (ButtonStatus_LCL & BUTTONS_BUTTON1)
-	  JoystickReport->Button |= (1 << 0);
+	JoystickReport->Button = Buttons_GetStatus();
 
 	*ReportSize = sizeof(USB_JoystickReport_Data_t);
 	return false;
