@@ -1,5 +1,7 @@
 # USB Arcade Joystick using a Minimus 32
 
+![External view of the joystick](https://jamie.lentin.co.uk/embedded/arcade-joystick/joystick_external.jpeg)
+
 This repository contains the source code for my joystick described here:
 
 https://jamie.lentin.co.uk/embedded/arcade-joystick/
